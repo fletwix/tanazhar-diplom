@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrailWeaver</title>
+  
+  <!-- Yandex Maps JS API -->
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=ca0b5c17-1fdd-4e63-8ccf-70dd962da097" type="text/javascript"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/style.css?v=4">
+</head>
+<body>
+  
+  <div id="app-container">
+    <!-- Map Container -->
+    <div id="map"></div>
+    
+    <!-- Floating Map Controls -->
+    <div class="map-floating-controls">
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div class="map-search-form" id="map-search-form">
+            <input type="text" id="map-search-input" placeholder="Поиск заведений и мест..." autocomplete="off">
+            <button type="button" id="btn-map-search" class="icon-btn" title="Искать">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+          </div>
+          <button id="btn-geolocation" class="icon-btn geo-btn" title="Мое местоположение">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+          </button>
+        </div>
+        <div class="quick-search-chips" style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+          <button class="pill-btn quick-search-btn" data-query="ресторан">🍽 Рестораны</button>
+          <button class="pill-btn quick-search-btn" data-query="кафе">☕ Кафе</button>
+          <button class="pill-btn quick-search-btn" data-query="достопримечательность">🏛 Интересное</button>
+          <button class="pill-btn quick-search-btn" data-query="отель">🏨 Отели</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sidebar UI Overlay (Glassmorphism) -->
+    <aside id="sidebar" class="glass-panel">
+      <header class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1>⛰️ TrailWeaver</h1>
+          <p>Создавайте и открывайте пешие маршруты</p>
+        </div>
+        <button id="theme-toggle" class="icon-btn" title="Переключить тему">
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+      </header>
+
+      <!-- Auth Section -->
+      <section id="auth-section">
+        <div id="logged-out-view">
+          <!-- Login Form -->
+          <form id="login-form" class="auth-form">
+            <input type="email" id="email" placeholder="Email" required autocomplete="email">
+            <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password">
+            <button type="submit" class="primary-btn">Войти</button>
+            <p class="auth-hint">Нет аккаунта? <a href="#" id="show-register">Регистрация</a></p>
+          </form>
+
+          <!-- Register Form -->
+          <form id="register-form" class="auth-form hidden">
+            <input type="text" id="reg-username" placeholder="Имя пользователя" required autocomplete="username">
+            <input type="email" id="reg-email" placeholder="Email" required autocomplete="email">
+            <input type="password" id="reg-password" placeholder="Пароль" required autocomplete="new-password">
+            <input type="number" id="reg-weight" placeholder="Вес (кг), напр. 75" required min="30" max="250" step="0.5">
+            <button type="submit" class="primary-btn">Зарегистрироваться</button>
+            <p class="auth-hint">Уже есть аккаунт? <a href="#" id="show-login">Войти</a></p>
+          </form>
+        </div>
+        
+        <div id="logged-in-view" class="hidden">
+          <p>Добро пожаловать, <span id="user-name-display">Турист</span>!</p>
+          <button id="logout-btn" class="secondary-btn">Выйти</button>
+        </div>
+      </section>
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="explore">Поиск</button>
+        <button class="tab-btn" data-tab="create">Создать маршрут</button>
+      </nav>
+
+      <!-- Tab Content: Explore -->
+      <section id="tab-explore" class="tab-content active">
+        <div class="search-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button id="btn-search-area" class="primary-btn" style="flex: 1;">Искать в этой области</button>
+          <button id="btn-clear-map" class="secondary-btn" title="Очистить карту" style="padding: 0 12px;">✕</button>
+          <select id="rating-filter" style="width: 100%; margin-top: 8px; margin-bottom: 0;">
+            <option value="any">Любой рейтинг</option>
+            <option value="high">Высокий рейтинг (≥ 4.0)</option>
+            <option value="low">Низкий рейтинг (&lt; 4.0)</option>
+            <option value="5">5 звёзд</option>
+            <option value="4">4 звезды</option>
+            <option value="3">3 звезды</option>
+            <option value="2">2 звезды</option>
+            <option value="1">1 звезда</option>
+          </select>
+        </div>
+        <div id="route-list" class="route-list">
+          <!-- Routes will be appended here -->
+          <div class="empty-state">Переместите карту и нажмите поиск</div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Create -->
+      <section id="tab-create" class="tab-content hidden">
+        <p class="instruction">Кликайте по карте или используйте поиск на карте, чтобы добавить точки маршрута.</p>
+        <form id="route-create-form">
+          <input type="text" id="route-title" placeholder="Название маршрута" required>
+          <textarea id="route-desc" placeholder="Описание" rows="3"></textarea>
+          <select id="route-difficulty">
+            <option value="EASY">Лёгкий</option>
+            <option value="MEDIUM">Средний</option>
+            <option value="HARD">Сложный</option>
+          </select>
+          <div class="waypoints-info">
+            <span id="wp-count">0</span> точек добавлено
+            <button type="button" id="btn-clear-wp" class="text-btn">Очистить</button>
+          </div>
+          <button type="submit" class="primary-btn" id="btn-save-route" disabled>Сохранить маршрут</button>
+        </form>
+      </section>
+
+      <!-- Route Details View (Overlays list) -->
+      <section id="route-details" class="hidden glass-panel-inner">
+        <button id="btn-back" class="text-btn">← Назад</button>
+        <h2 id="detail-title">Название маршрута</h2>
+        <div id="detail-rating" style="margin-bottom: 8px; display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--text-secondary);"></div>
+        <div class="tags">
+          <span class="tag diff" id="detail-diff">EASY</span>
+          <span class="tag"><span id="detail-dist">0</span> км</span>
+          <span class="tag">↑ <span id="detail-elev">0</span> м</span>
+        </div>
+        <p id="detail-desc" class="desc-text">Описание отсутствует</p>
+
+        <!-- Weather -->
+        <div class="weather-widget" id="weather-container">
+          Загрузка погоды...
+        </div>
+
+        <!-- Energy Calc -->
+        <div class="energy-widget">
+          <h4>Расход энергии</h4>
+          <form id="energy-form">
+            <input type="number" id="backpack-weight" placeholder="Вес рюкзака (кг)" value="5" min="0" step="0.5">
+            <button type="submit" class="small-btn">Рассчитать</button>
+          </form>
+          <div id="energy-result" class="hidden result-calc">
+            <span id="calc-kcal">--</span> ккал за <span id="calc-hours">--</span> ч
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-row">
+          <button id="btn-download-gpx" class="primary-btn outline">📥 Скачать GPX</button>
+        </div>
+        
+        <!-- Reviews -->
+        <div class="reviews-section">
+          <h4>Отзывы</h4>
+          <div id="reviews-list"></div>
+          <form id="review-form">
+             <div class="star-rating-input" id="star-rating-container">
+               <!-- Stars rendered via JS -->
+             </div>
+             <input type="hidden" id="review-rating" value="0" required>
+             <div class="review-form-actions">
+               <input type="text" id="review-comment" placeholder="Отличный маршрут!" required>
+               <button type="submit" class="primary-btn" style="width: auto;">Отправить</button>
+             </div>
+          </form>
+        </div>
+        
+      </section>
+      
+    </aside>
+  </div>
+
+  <!-- App JS -->
+  <script src="/static/app.js?v=8"></script>
+</body>
+</html>
