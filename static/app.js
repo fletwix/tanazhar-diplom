@@ -3,7 +3,7 @@
  * Vanilla JS + Yandex Maps API + Fetch API
  */
 
-const API_BASE = "http://localhost:8000"; // Assuming local dev
+const API_BASE = window.location.origin; // Always same host as frontend
 
 // ── Toast Notifications ──────────────────────────────────────────
 function showNotification(message, type = 'info') {
@@ -270,7 +270,7 @@ function setupEventListeners() {
       DOM.regPass.value, 
       'register', 
       DOM.regUsername.value, 
-      parseFloat(DOM.regWeight.value)
+      parseFloat(DOM.regWeight.value) || 70
     );
     
     btn.textContent = ogText;
@@ -832,14 +832,22 @@ async function calculateEnergy(e) {
   if (!state.selectedRouteId) return;
   if (!state.token) return showNotification("Войдите в аккаунт для расчета", "info");
   
-  const backpackWeight = parseFloat(DOM.energyPack.value) || 0;
+  const backpackWeight = Math.max(0, parseFloat(DOM.energyPack.value) || 0);
   
   try {
-    const res = await fetch(`${API_BASE}/routes/${state.selectedRouteId}/energy?backpack_weight_kg=${backpackWeight}`, {
-      headers: { "Authorization": `Bearer ${state.token}` }
+    const res = await fetch(`${API_BASE}/routes/${state.selectedRouteId}/energy-calc`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ backpack_weight_kg: backpackWeight })
     });
     
-    if(!res.ok) throw new Error("Ошибка расчета");
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Ошибка расчета (${res.status})`);
+    }
     
     const data = await res.json();
     DOM.calcKcal.textContent = data.total_calories_kcal;

@@ -354,8 +354,14 @@ async def calculate_energy(
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found")
         
-    W = current_user.weight_kg
+    W = current_user.weight_kg or 0.0
     L = body.backpack_weight_kg
+
+    if W <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Вес пользователя не задан. Укажите вес в профиле при регистрации."
+        )
     
     # Pandolf Equation for Walking Metabolism (Watts)
     # M = 1.5*W + 2.0*(W+L)*(L/W)^2 + n*(W+L)*(1.5*V^2 + 0.35*V*G)
